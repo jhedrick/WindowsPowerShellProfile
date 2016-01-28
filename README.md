@@ -11,6 +11,7 @@ The purpose of this file should be as simple as
 ## Functions:
 
 + posh-git : Adds annotation to the shell when in a git folder. `C:\..\*.git [master +3 ~0 -0 !] >`
++ shorten-path: Creates a visually short representation of the current directory. `§ computerName {~\D\WindowsPowerShell}`
 + Visual Studio Command Prompt : Enables access to cl.exe and other VS compilers you have installed.
 + `ls, dir` commands: 
     * are colored, similar to ls on linux systems. This is configurable under `New-CommandWrapper()`
