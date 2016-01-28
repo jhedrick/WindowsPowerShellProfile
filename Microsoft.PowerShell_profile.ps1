@@ -18,10 +18,15 @@ If (-Not($Verify)) {
   Exit
 } 
 
+## Improve terminal format
+# ========================
+. PowerShell-Formatting
+
 
 ## Load Path Modification Support
+# ===============================
 
-. "$home\Documents\WindowsPowerShell\Scripts\Path-Modification-Support.ps1"
+. Path-Modification-Support
 
 
 ## Load posh-git example profile 
