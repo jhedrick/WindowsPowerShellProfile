@@ -25,7 +25,7 @@ If (-Not($Verify)) {
 # My prompt was modified to include abbreviate long shell paths from http://winterdom.com/2008/08/mypowershellprompt
 
 if (Get-Module -ListAvailable -Name posh-git) {
-  . '.\Documents\WindowsPowerShell\Modules\posh-git\profile.example.ps1'
+  . "$home\Documents\WindowsPowerShell\Modules\posh-git\profile.example.ps1"
 } else {
   if (-Not(Get-Command git)) {Write-Host "Please download git from http://git-scm.com ... then ..."}
   Write-Host "`nPlease visit : "   -ForegroundColor Red
