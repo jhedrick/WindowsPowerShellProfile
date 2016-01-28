@@ -19,6 +19,10 @@ If (-Not($Verify)) {
 } 
 
 
+## Load Path Modification Support
+
+. .\Path-Modification-Support.ps1
+
 
 ## Load posh-git example profile 
 #=================================
@@ -41,7 +45,7 @@ if (Get-Module -ListAvailable -Name posh-git) {
 $ProgramFilesx86 = "${Env:ProgramFiles(x86)}"  
 if (Test-Path "$ProgramFilesx86\Microsoft Visual Studio 14.0\VC") { 
   pushd 'c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC'
-  cmd /c "vcvarsall.bat x64 & set" |
+  cmd /c "vcvarsall.bat intel64 & set" |
   foreach {
     if ($_ -match "=") {
       $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
