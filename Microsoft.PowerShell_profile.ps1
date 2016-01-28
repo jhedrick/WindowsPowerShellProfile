@@ -1,4 +1,11 @@
-﻿
+﻿# POWERSHELL PROFILE SCRIPT
+# USEAGE: 1) Open powershell, type $profile.
+#         2) Go to location in windows explorer, make a copy of your existing profile
+#         3) Overwrite the existing file with this file. 
+#            The script should display error messages if you do not have the proper software installed or pathed.
+
+## Check if scripts directory is on the path
+#============================================
 
 $CheckScriptPath = "$home\Documents\WindowsPowerShell\Scripts"
 $Path=(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path 
