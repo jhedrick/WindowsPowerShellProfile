@@ -136,8 +136,6 @@ if (Get-Module -ListAvailable -Name posh-git) {
       return "> "
   }
 
-  Enable-GitColors
-
   Pop-Location
 
   Start-SshAgent -Quiet
