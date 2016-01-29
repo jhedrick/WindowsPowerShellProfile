@@ -1,13 +1,28 @@
 ﻿# POWERSHELL PROFILE SCRIPT
 # USEAGE: 1) Open powershell, type $profile.
-#         2) Go to location in windows explorer, make a copy of your existing profile
+#         2) Go to location in windows explorer, make a copy of your existing profile (if it exists)
 #         3) Overwrite the existing file with this file. 
 #            The script should display error messages if you do not have the proper software installed or pathed.
+
+## Initializations
+#=================
+
+<# Uncomment the following if you have relocated your user directory to another location... You'll need to specify the location manually.
+(get-psprovider filesystem).Home = "X:\Users\<user>"
+#> 
+
+If (-Not (host).version.Major -gt 3) {
+    Write-Host "`nPlease download Windows Management Framework 4.0 or greater."  -ForegroundColor Red
+    Write-Host "`nDiscontinuing profile installation..." -ForegroundColor Red
+    Exit
+}
+
+$ProfileDir = Split-Path -Path $profile
 
 ## Check if scripts directory is on the path
 #============================================
 
-$CheckScriptPath = "$home\Documents\WindowsPowerShell\Scripts"
+$CheckScriptPath = "$ProfileDir\Scripts"
 $Path=(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path 
  
 # Verify item exists as an EXACT match to 
@@ -16,12 +31,55 @@ $Verify=$Path.split(';') -contains $CheckScriptPath
 If (-Not($Verify)) {
   Write-Host "`nPlease add $CheckScriptPath to your path and restart your powershell terminal."  -ForegroundColor Red
   Exit
-} 
+}
 
 
-## Load Path Modification Support
+## Check System Execution Policy
+# ===============================
 
-. "$home\Documents\WindowsPowerShell\Scripts\Path-Modification-Support.ps1"
+$Policy = "RemoteSigned"
+If ((get-ExecutionPolicy) -ne $Policy) {
+   Set-ExecutionPolicy $Policy -Force
+}
+
+
+# Check If PsGet is installed in the system.
+# ===============================
+
+if (Get-Module -ListAvailable -Name PsGet) {
+    Write-Host "PsGet is installed" -ForegroundColor Yellow
+} else {
+    Write-Host "Installing PsGet Module to add shell script / module installation support." -ForegroundColor Green
+    (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+}
+
+
+## Load Path Modification Support (Not PsGet Based Script)
+# ===============================
+
+. "Path-Modification-Support.ps1"
+
+
+# Check If git is installed in the system.
+# ==========================================
+
+if ((Get-Command "git.exe" -ErrorAction SilentlyContinue) -eq $null) 
+{ 
+   Write-Host "Unable to find git.exe in your PATH. Please check installation, or install from git-scm.com/downloads" -ForegroundColor Red
+   Write-Host "Powershell profile installation will not complete until git is installed."
+   Exit
+}
+
+
+# Check If PsGet is installed in the system.
+# ===========================================
+
+if (Get-Module -ListAvailable -Name posh-git) {
+    Write-Host "posh-git is installed" -ForegroundColor Yellow
+} else {
+    Write-Host "Installing posh-git Module to add git support." -ForegroundColor Green
+    Install-Module posh-git
+}
 
 
 ## Load posh-git example profile 
@@ -29,13 +87,59 @@ If (-Not($Verify)) {
 # My prompt was modified to include abbreviate long shell paths from http://winterdom.com/2008/08/mypowershellprompt
 
 if (Get-Module -ListAvailable -Name posh-git) {
-  . "$home\Documents\WindowsPowerShell\Modules\posh-git\profile.example.ps1"
+
+  Push-Location (Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)
+
+  # Load posh-git module from current directory
+  Import-Module posh-git
+
+  # If module is installed in a default location ($env:PSModulePath),
+  # use this instead (see about_Modules for more information):
+  # Import-Module posh-git
+
+  # Required to shorten.
+
+  function shorten-path([string] $path) {
+     $loc = $path.Replace($HOME, '~')
+     # remove prefix for UNC paths
+     $loc = $loc -replace '^[^:]+::', ''
+     # make path shorter like tabs in Vim,
+     # handle paths starting with \\ and . correctly
+     return ($loc -replace '\\(\.?)([^\\])[^\\]*(?=\\)','\$1$2')
+  }
+
+  # Set up a simple prompt, adding the git prompt parts inside git repos
+  function global:prompt {
+      $realLASTEXITCODE = $LASTEXITCODE
+
+      # Reset color, which can be messed up by Enable-GitColors
+      $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
+
+      #Write-Host($pwd.ProviderPath) -nonewline # Old git-posh
+      # New shorter lines.
+      $cdelim = [ConsoleColor]::DarkCyan
+      $chost = [ConsoleColor]::Green
+      $cloc = [ConsoleColor]::Cyan
+      write-host "$([char]0x0A7) " -n -f $cloc
+      write-host ([net.dns]::GetHostName()) -n -f $chost
+      write-host ' {' -n -f $cdelim
+      write-host (shorten-path (pwd).Path) -n -f $cloc
+      write-host '}' -n -f $cdelim
+
+      Write-VcsStatus
+
+      $global:LASTEXITCODE = $realLASTEXITCODE
+      return "> "
+  }
+
+  Enable-GitColors
+
+  Pop-Location
+
+  Start-SshAgent -Quiet
+
 } else {
-  if (-Not(Get-Command git)) {Write-Host "Please download git from http://git-scm.com ... then ..."}
-  Write-Host "`nPlease visit : "   -ForegroundColor Red
-  Write-Host "http://haacked.com/archive/2011/12/13/better-git-with-powershell.aspx/"   -ForegroundColor White
-  Write-Host "Follow instructions for installing Posh-Git."   -ForegroundColor Red
-  Write-Host "See $profile\..\Modules\posh-git\profile.example.ps1 in the gist for a better profile with shorter path."   -ForegroundColor Red
+  Write-Host "Profile installation incomplete. Ensure posh-git is installed to enable prompt update."   -ForegroundColor Red
 }
 
 
@@ -44,8 +148,8 @@ if (Get-Module -ListAvailable -Name posh-git) {
 
 $ProgramFilesx86 = "${Env:ProgramFiles(x86)}"  
 if (Test-Path "$ProgramFilesx86\Microsoft Visual Studio 14.0\VC") { 
-  pushd 'c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC'
-  cmd /c "vcvarsall.bat intel64 & set" |
+  pushd "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools"
+  cmd /c "vsvars32.bat amd64 & set" |
   foreach {
     if ($_ -match "=") {
       $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
@@ -210,3 +314,14 @@ if (Test-Path "$ProgramFilesx86\Vim\vim74") {
   write-host "`nhttp://www.vim.org/download.php#pc" -ForegroundColor White
   
 }
+
+## Confirm Status
+# ===============
+
+$continue = Read-Host "Clear prompt? (y/n)"
+If ($continue -eq "y") {
+  Clear-Host
+} Else { 
+  Write-Host "Welcome back!"
+}
+
