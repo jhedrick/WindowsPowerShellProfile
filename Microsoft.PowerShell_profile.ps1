@@ -57,7 +57,11 @@ if (Get-Module -ListAvailable -Name PsGet) {
 ## Load Path Modification Support (Not PsGet Based Script)
 # ===============================
 
-. "Path-Modification-Support.ps1"
+. Path-Modification-Support
+
+## Improve terminal format
+# ========================
+. PowerShell-Formatting
 
 
 # Check If git is installed in the system.
