@@ -92,76 +92,102 @@ if (Get-Module -ListAvailable -Name posh-git) {
 
 if (Get-Module -ListAvailable -Name posh-git) {
 
-  Push-Location (Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)
+    Push-Location (Split-Path -Path $MyInvocation.MyCommand.Definition -Parent)
 
-  # Load posh-git module from current directory
-  Import-Module posh-git
+    # Load posh-git module from current directory
+    Import-Module posh-git
 
-  # If module is installed in a default location ($env:PSModulePath),
-  # use this instead (see about_Modules for more information):
-  # Import-Module posh-git
+    # If module is installed in a default location ($env:PSModulePath),
+    # use this instead (see about_Modules for more information):
+    # Import-Module posh-git
 
-  # Required to shorten.
+    # Required to shorten.
 
-  function shorten-path([string] $path) {
-     $loc = $path.Replace($HOME, '~')
-     # remove prefix for UNC paths
-     $loc = $loc -replace '^[^:]+::', ''
-     # make path shorter like tabs in Vim,
-     # handle paths starting with \\ and . correctly
-     return ($loc -replace '\\(\.?)([^\\])[^\\]*(?=\\)','\$1$2')
-  }
+    function shorten-path([string] $path) {
+       $loc = $path.Replace($HOME, '~')
+       # remove prefix for UNC paths
+       $loc = $loc -replace '^[^:]+::', ''
+       # make path shorter like tabs in Vim,
+       # handle paths starting with \\ and . correctly
+       return ($loc -replace '\\(\.?)([^\\])[^\\]*(?=\\)','\$1$2')
+    }
 
-  # Set up a simple prompt, adding the git prompt parts inside git repos
-  function global:prompt {
-      $realLASTEXITCODE = $LASTEXITCODE
+    # Set up a simple prompt, adding the git prompt parts inside git repos
+    function global:prompt {
+        $realLASTEXITCODE = $LASTEXITCODE
 
-      # Reset color, which can be messed up by Enable-GitColors
-      $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
+        # Reset color, which can be messed up by Enable-GitColors
+        $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
 
-      #Write-Host($pwd.ProviderPath) -nonewline # Old git-posh
-      # New shorter lines.
-      $cdelim = [ConsoleColor]::DarkCyan
-      $chost = [ConsoleColor]::Green
-      $cloc = [ConsoleColor]::Cyan
-      write-host "$([char]0x0A7) " -n -f $cloc
-      write-host ([net.dns]::GetHostName()) -n -f $chost
-      write-host ' {' -n -f $cdelim
-      write-host (shorten-path (pwd).Path) -n -f $cloc
-      write-host '}' -n -f $cdelim
+        #Write-Host($pwd.ProviderPath) -nonewline # Old git-posh
+        # New shorter lines.
+        $cdelim = [ConsoleColor]::DarkCyan
+        $chost = [ConsoleColor]::Green
+        $cloc = [ConsoleColor]::Cyan
+        Write-Host "$([char]0x0A7) " -n -f $cloc
+        Write-Host ([net.dns]::GetHostName()) -n -f $chost
+        Write-Host ' {' -n -f $cdelim
+        Write-Host (shorten-path (pwd).Path) -n -f $cloc
+        Write-Host '}' -n -f $cdelim
 
-      Write-VcsStatus
+        Write-VcsStatus
 
-      $global:LASTEXITCODE = $realLASTEXITCODE
-      return "> "
-  }
+        $global:LASTEXITCODE = $realLASTEXITCODE
+        return "> "
+    }
 
-  Pop-Location
+    Pop-Location
 
-  Start-SshAgent -Quiet
+    Start-SshAgent -Quiet
 
 } else {
-  Write-Host "Profile installation incomplete. Ensure posh-git is installed to enable prompt update."   -ForegroundColor Red
+    Write-Host "Profile installation incomplete. Ensure posh-git is installed to enable prompt update."   -ForegroundColor Red
 }
 
 
 ## Set environment variables for Visual Studio Command Prompt 
 #=================================
-
-$ProgramFilesx86 = "${Env:ProgramFiles(x86)}"  
-if (Test-Path "$ProgramFilesx86\Microsoft Visual Studio 14.0\VC") { 
-  pushd "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools"
-  cmd /c "vsvars32.bat amd64 & set" |
-  foreach {
-    if ($_ -match "=") {
-      $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
-    }
+. PowerShell-Environment-Tools
+if ($Env:VS140COMNTOOLS) {
+  if (Test-Path "$Env:VS140COMNTOOLS..\..\VC") { 
+    Invoke-CmdScript "$Env:VS140COMNTOOLS..\..\VC\vcvarsall.bat" "x64"
+    Write-Host "`nVisual Studio 2015 (MSVC14) Command Prompt variables set." -ForegroundColor Yellow
   }
-  popd
-  write-host "`nVisual Studio 2015 (MSVC14) Command Prompt variables set." -ForegroundColor Yellow
 } Else {
-  write-host "`nPlease install Visual Studio 2015 (MSVC14)." -ForegroundColor Red
+  Write-Host "`nPlease install Visual Studio 2015 (MSVC14)." -ForegroundColor Red
 }
+
+
+## Set environment variables for Intel XE 2016 Library Command Prompt
+#====================================================================
+$ProgramFilesx86 = "${Env:ProgramFiles(x86)}"
+if (Test-Path "$ProgramFilesx86\IntelSWTools\compilers_and_libraries_2016.1.146") {
+    Invoke-CmdScript "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\bin\ipsxe-comp-vars.bat" "intel64 vc2015" 
+    Write-Host "`n ... Variables superseded by Intel Compilers and Libraries." -ForegroundColor Yellow
+    Invoke-CmdScript "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\bin\mklvars.bat" "intel64 vc2015"
+    Write-Host "`n ... including Intel MKL." -ForegroundColor Yellow
+}
+
+
+## Clean up environment variables by removing duplicates
+#=======================================================
+
+$d = ';' # Separate paths by delimiter
+$list = (Get-Childitem Env:)
+foreach ($item in $list) { 
+  Try { 
+    #Write-Host "`n Processed:" $item.name
+    #Write-Host "Value:" $item.value
+    $new_value = (( $item.value -split $d | select -Unique ) -join $d)
+    #(Set-Item env:$item.name $new_value) # This does not work in V4
+    [Environment]::SetEnvironmentVariable($item.name,$new_value) # This does?
+    #Write-Host "`n Processed:" $item.name
+    #Write-Host "Value:" $item.value
+  } Catch {
+    Write-Host ("Failed to process: " + $item.name)
+  }
+}
+
 
 ## Color the dir and ls commands.
 #=================================
@@ -274,15 +300,15 @@ if (Test-Path "$ProgramFilesx86\Microsoft Visual Studio 14.0\VC") {
   Set-Alias ls Get-DirWithSize
   Set-Alias la Get-DirWithSize
 
-  write-host "`ndir and ls output will now be colored." -ForegroundColor Yellow
+  Write-Host "`ndir and ls output will now be colored." -ForegroundColor Yellow
 } catch  { 
-  write-host "`nCould not set dir and ls..." -ForegroundColor Red
+  Write-Host "`nCould not set dir and ls..." -ForegroundColor Red
 }
 
 ## Set BASH aliases (makes PS more unix user friendly)
 #=====================================================
 
-write-host "`nSetting some bash like aliases..." -ForegroundColor Yellow
+Write-Host "`nSetting some bash like aliases..." -ForegroundColor Yellow
 
 function which
 {
@@ -310,10 +336,10 @@ if (Test-Path "$ProgramFilesx86\Vim\vim74") {
       vim $HOME\_vimrc
   }
 
-  write-host "`nVim has been initialized!" -ForegroundColor Yellow
+  Write-Host "`nVim has been initialized!" -ForegroundColor Yellow
 } Else { 
-  write-host "`nInstall Vim for windows if you would like a syntax highlighting text editor in terminal." -ForegroundColor Red
-  write-host "`nhttp://www.vim.org/download.php#pc" -ForegroundColor White
+  Write-Host "`nInstall Vim for windows if you would like a syntax highlighting text editor in terminal." -ForegroundColor Red
+  Write-Host "`nhttp://www.vim.org/download.php#pc" -ForegroundColor White
   
 }
 
@@ -326,4 +352,3 @@ If ($continue -eq "y") {
 } Else { 
   Write-Host "Welcome back!"
 }
-
