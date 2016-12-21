@@ -1,7 +1,7 @@
 ﻿# POWERSHELL PROFILE SCRIPT
 # USEAGE: 1) Open powershell, type $profile.
 #         2) Go to location in windows explorer, make a copy of your existing profile (if it exists)
-#         3) Overwrite the existing file with this file. 
+#         3) Overwrite the existing file with this file.
 #            The script should display error messages if you do not have the proper software installed or pathed.
 
 ## Initializations
@@ -9,7 +9,7 @@
 
 <# Uncomment the following if you have relocated your user directory to another location... You'll need to specify the location manually.
 (get-psprovider filesystem).Home = "X:\Users\<user>"
-#> 
+#>
 
 If (-Not (host).version.Major -gt 3) {
     Write-Host "`nPlease download Windows Management Framework 4.0 or greater."  -ForegroundColor Red
@@ -23,14 +23,22 @@ $ProfileDir = Split-Path -Path $profile
 #============================================
 
 $CheckScriptPath = "$ProfileDir\Scripts"
-$Path=(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path 
- 
-# Verify item exists as an EXACT match to 
-$Verify=$Path.split(';') -contains $CheckScriptPath 
- 
+$Path=(Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path
+
+
+# Verify item exists as an EXACT match to
+$Verify=$Path.split(';') -contains $CheckScriptPath
+
 If (-Not($Verify)) {
   Write-Host "`nPlease add $CheckScriptPath to your path and restart your powershell terminal."  -ForegroundColor Red
-  Exit
+  # Check the active user's path since it is not concatinated onto the registry...
+  $Path=[Environment]::GetEnvironmentVariable( "PATH", [System.EnvironmentVariableTarget]::User )
+  # Verify item exists as an EXACT match to
+  $Verify=$Path.split(';') -contains $CheckScriptPath
+  If (-Not($Verify)) {
+    Write-Host "`nAlso checked the active users path."  -ForegroundColor Red
+    Exit
+  }
 }
 
 
@@ -67,8 +75,8 @@ if (Get-Module -ListAvailable -Name PsGet) {
 # Check If git is installed in the system.
 # ==========================================
 
-if ((Get-Command "git.exe" -ErrorAction SilentlyContinue) -eq $null) 
-{ 
+if ((Get-Command "git.exe" -ErrorAction SilentlyContinue) -eq $null)
+{
    Write-Host "Unable to find git.exe in your PATH. Please check installation, or install from git-scm.com/downloads" -ForegroundColor Red
    Write-Host "Powershell profile installation will not complete until git is installed."
    Exit
@@ -86,7 +94,7 @@ if (Get-Module -ListAvailable -Name posh-git) {
 }
 
 
-## Load posh-git example profile 
+## Load posh-git example profile
 #=================================
 # My prompt was modified to include abbreviate long shell paths from http://winterdom.com/2008/08/mypowershellprompt
 
@@ -145,11 +153,11 @@ if (Get-Module -ListAvailable -Name posh-git) {
 }
 
 
-## Set environment variables for Visual Studio Command Prompt 
+## Set environment variables for Visual Studio Command Prompt
 #=================================
 . PowerShell-Environment-Tools
 if ($Env:VS140COMNTOOLS) {
-  if (Test-Path "$Env:VS140COMNTOOLS..\..\VC") { 
+  if (Test-Path "$Env:VS140COMNTOOLS..\..\VC") {
     Invoke-CmdScript "$Env:VS140COMNTOOLS..\..\VC\vcvarsall.bat" "x64"
     Write-Host "`nVisual Studio 2015 (MSVC14) Command Prompt variables set." -ForegroundColor Yellow
   }
@@ -162,7 +170,7 @@ if ($Env:VS140COMNTOOLS) {
 #====================================================================
 $ProgramFilesx86 = "${Env:ProgramFiles(x86)}"
 if (Test-Path "$ProgramFilesx86\IntelSWTools\compilers_and_libraries_2016.1.146") {
-    Invoke-CmdScript "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\bin\ipsxe-comp-vars.bat" "intel64 vc2015" 
+    Invoke-CmdScript "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\bin\ipsxe-comp-vars.bat" "intel64 vc2015"
     Write-Host "`n ... Variables superseded by Intel Compilers and Libraries." -ForegroundColor Yellow
     Invoke-CmdScript "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\bin\mklvars.bat" "intel64 vc2015"
     Write-Host "`n ... including Intel MKL." -ForegroundColor Yellow
@@ -174,8 +182,8 @@ if (Test-Path "$ProgramFilesx86\IntelSWTools\compilers_and_libraries_2016.1.146"
 
 $d = ';' # Separate paths by delimiter
 $list = (Get-Childitem Env:)
-foreach ($item in $list) { 
-  Try { 
+foreach ($item in $list) {
+  Try {
     #Write-Host "`n Processed:" $item.name
     #Write-Host "Value:" $item.value
     $new_value = (( $item.value -split $d | select -Unique ) -join $d)
@@ -191,7 +199,7 @@ foreach ($item in $list) {
 
 ## Color the dir and ls commands.
 #=================================
-  try { 
+  try {
   New-CommandWrapper Out-Default -Process {
     $regex_opts = ([System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
     $compressed = New-Object System.Text.RegularExpressions.Regex(
@@ -301,7 +309,7 @@ foreach ($item in $list) {
   Set-Alias la Get-DirWithSize
 
   Write-Host "`ndir and ls output will now be colored." -ForegroundColor Yellow
-} catch  { 
+} catch  {
   Write-Host "`nCould not set dir and ls..." -ForegroundColor Red
 }
 
@@ -319,7 +327,7 @@ get-command $args -All | Format-Table CommandType, Name, Definition -AutoSize
 ## Configure vim
 #================
 
-if (Test-Path "$ProgramFilesx86\Vim\vim74") { 
+if (Test-Path "$ProgramFilesx86\Vim\vim74") {
 
   set-alias vim "C:/Program Files (x86)/Vim/vim74/vim.exe"
 
@@ -337,10 +345,10 @@ if (Test-Path "$ProgramFilesx86\Vim\vim74") {
   }
 
   Write-Host "`nVim has been initialized!" -ForegroundColor Yellow
-} Else { 
+} Else {
   Write-Host "`nInstall Vim for windows if you would like a syntax highlighting text editor in terminal." -ForegroundColor Red
   Write-Host "`nhttp://www.vim.org/download.php#pc" -ForegroundColor White
-  
+
 }
 
 ## Confirm Status
@@ -349,6 +357,9 @@ if (Test-Path "$ProgramFilesx86\Vim\vim74") {
 $continue = Read-Host "Clear prompt? (y/n)"
 If ($continue -eq "y") {
   Clear-Host
-} Else { 
+} Else {
   Write-Host "Welcome back!"
 }
+
+# Load posh-git example profile
+. 'C:\Users\jhedrick\Documents\WindowsPowerShell\Modules\posh-git\profile.example.ps1'
